@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/sidebar'
+import { PullToRefresh } from '@/components/layout/pull-to-refresh'
 import type { UserRole } from '@/types'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -20,9 +21,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar role={profile.role as UserRole} fullName={profile.full_name} />
-      <main className="flex-1 overflow-auto pb-16 md:pb-0">
+      <PullToRefresh>
         {children}
-      </main>
+      </PullToRefresh>
     </div>
   )
 }

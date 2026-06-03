@@ -52,6 +52,19 @@ export function BeachMap({ role }: BeachMapProps) {
       .select('*, items:order_items(*, menu_item:menu_items(name, type))')
       .in('status', ['pending', 'preparing', 'ready', 'delivering'])
 
+    // Auto-reset beds that are marked occupied but have no active rental (e.g. from previous day)
+    const staleIds = bedsData
+      .filter(b => b.status === 'occupied' && !rentals?.find(r => r.bed_id === b.id))
+      .map(b => b.id)
+
+    if (staleIds.length > 0) {
+      await supabase.from('beds').update({ status: 'available' }).in('id', staleIds)
+      staleIds.forEach(id => {
+        const bed = bedsData.find(b => b.id === id)
+        if (bed) bed.status = 'available'
+      })
+    }
+
     const enriched: BedWithState[] = bedsData.map(bed => ({
       ...bed,
       active_rental: rentals?.find(r => r.bed_id === bed.id) ?? null,
