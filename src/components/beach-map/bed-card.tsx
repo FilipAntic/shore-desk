@@ -44,7 +44,7 @@ export function BedCard({ bed, isSelected, onClick }: BedCardProps) {
         'relative flex flex-col items-center justify-center rounded-lg border-2 transition-all',
         'w-16 h-16 text-xs font-semibold select-none',
         getBedStyle(bed),
-        isSelected && 'ring-2 ring-offset-1 ring-sky-500 scale-105'
+        isSelected && 'ring-2 ring-offset-1 ring-sky-500 z-10'
       )}
       title={`Bed ${bed.label} — ${bed.status}`}
     >

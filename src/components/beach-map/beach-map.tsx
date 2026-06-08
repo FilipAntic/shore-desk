@@ -43,7 +43,7 @@ export function BeachMap({ role }: BeachMapProps) {
 
     const { data: rentals } = await supabase
       .from('rentals')
-      .select('*, seller:profiles(full_name)')
+      .select('*, seller:profiles!seller_id(full_name)')
       .eq('voided', false)
       .gte('ends_at', new Date().toISOString())
 
