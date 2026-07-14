@@ -233,7 +233,7 @@ export function Sidebar({ role, fullName, beachSlug, beachId, beaches = [] }: Si
 
       {/* ── Mobile "More" overlay ───────────────────────────────── */}
       {moreOpen && (
-        <div className="md:hidden fixed inset-0 z-[60] flex flex-col-reverse">
+        <div className="md:hidden fixed inset-0 z-50 flex flex-col-reverse">
           <div className="bg-white rounded-t-2xl shadow-2xl">
             <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
