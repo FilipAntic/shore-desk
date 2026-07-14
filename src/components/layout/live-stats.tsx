@@ -13,9 +13,10 @@ interface Stat {
 interface LiveStatsProps {
   currency: string
   pricePerBed: number
+  beachId: string
 }
 
-export function LiveStats({ currency, pricePerBed }: LiveStatsProps) {
+export function LiveStats({ currency, pricePerBed, beachId }: LiveStatsProps) {
   const [stats, setStats] = useState<Stat[]>([])
   const symbol = currency === 'EUR' ? '€' : currency
 
@@ -28,16 +29,19 @@ export function LiveStats({ currency, pricePerBed }: LiveStatsProps) {
       supabase
         .from('rentals')
         .select('*', { count: 'exact', head: true })
+        .eq('beach_id', beachId)
         .gte('created_at', today.toISOString())
         .eq('voided', false),
       supabase
         .from('order_items')
-        .select('unit_price, quantity, order:orders!inner(created_at, status)')
+        .select('unit_price, quantity, order:orders!inner(created_at, status, beach_id)')
+        .eq('order.beach_id', beachId)
         .gte('order.created_at', today.toISOString())
         .neq('order.status', 'cancelled'),
       supabase
         .from('beds')
         .select('status')
+        .eq('beach_id', beachId)
         .eq('is_active', true),
     ])
 
@@ -56,22 +60,22 @@ export function LiveStats({ currency, pricePerBed }: LiveStatsProps) {
       { label: 'Currently Occupied', value: `${occupiedBeds}/${totalBeds}`,        sub: 'beds',   color: 'text-slate-700' },
       { label: 'Food & Drink',       value: `${symbol}${orderRevenue.toFixed(2)}`, sub: 'today',  color: 'text-amber-600' },
     ])
-  }, [symbol, pricePerBed])
+  }, [symbol, pricePerBed, beachId])
 
   useEffect(() => {
     fetchStats()
 
     const supabase = createClient()
     const channel = supabase
-      .channel('live-stats')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rentals' }, fetchStats)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchStats)
+      .channel(`live-stats-${beachId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rentals', filter: `beach_id=eq.${beachId}` }, fetchStats)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `beach_id=eq.${beachId}` }, fetchStats)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchStats)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'beds' }, fetchStats)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'beds', filter: `beach_id=eq.${beachId}` }, fetchStats)
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [fetchStats])
+  }, [fetchStats, beachId])
 
   if (stats.length === 0) {
     return (

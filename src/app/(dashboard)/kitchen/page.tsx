@@ -1,9 +1,5 @@
-import { KdsDisplay } from '@/components/orders/kds-display'
+import { redirectToOwnBeach } from '@/lib/beach'
 
-export default function KitchenPage() {
-  return (
-    <div className="h-full min-h-screen md:min-h-0">
-      <KdsDisplay filter="food" title="Kitchen" icon="🍳" />
-    </div>
-  )
+export default async function LegacyKitchenRedirect() {
+  await redirectToOwnBeach('kitchen')
 }

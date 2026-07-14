@@ -37,6 +37,7 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
       const { data } = await supabase
         .from('config')
         .select('key, value')
+        .eq('beach_id', bed.beach_id)
         .in('key', ['price_full_day', 'closing_time', 'late_arrival_price', 'late_arrival_time'])
 
       const priceRow = data?.find(r => r.key === 'price_full_day')
@@ -76,6 +77,7 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
 
     const { error: rentalError } = await supabase.from('rentals').insert({
       bed_id:        bed.id,
+      beach_id:      bed.beach_id,
       seller_id:     user.id,
       ends_at:       calcEndsAt().toISOString(),
       amount_paid:   price,

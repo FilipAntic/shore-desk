@@ -11,7 +11,7 @@ interface CartItem {
 }
 
 interface OrderMenuProps {
-  bed: { id: string; label: string; status: string }
+  bed: { id: string; label: string; status: string; beach_id: string }
   menuItems: MenuItem[]
   beachName: string
   currency: string
@@ -130,6 +130,7 @@ export function OrderMenu({ bed, menuItems, beachName, currency }: OrderMenuProp
       .from('orders')
       .insert({
         bed_id:        bed.id,
+        beach_id:      bed.beach_id,
         customer_name: customerName.trim() || null,
         notes:         orderNotes.trim() || null,
         status:        'pending',

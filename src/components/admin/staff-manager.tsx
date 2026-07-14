@@ -31,9 +31,10 @@ const ROLE_BADGE: Record<UserRole, string> = {
 interface StaffManagerProps {
   staff: Profile[]
   currentRole: string
+  beachId: string
 }
 
-export function StaffManager({ staff, currentRole }: StaffManagerProps) {
+export function StaffManager({ staff, currentRole, beachId }: StaffManagerProps) {
   const router = useRouter()
   const [addOpen, setAddOpen] = useState(false)
   const [email, setEmail] = useState('')
@@ -52,7 +53,7 @@ export function StaffManager({ staff, currentRole }: StaffManagerProps) {
       const res = await fetch('/api/admin/staff', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, fullName, role }),
+        body: JSON.stringify({ email, password, fullName, role, beachId }),
       })
 
       const json = await res.json()

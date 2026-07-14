@@ -30,6 +30,7 @@ import { CSS } from '@dnd-kit/utilities'
 
 interface BedLayoutManagerProps {
   beds: Bed[]
+  beachId: string
 }
 
 function SortableBed({ bed, onToggle }: { bed: Bed; onToggle: () => void }) {
@@ -71,7 +72,7 @@ function BedDragOverlay({ bed }: { bed: Bed | null }) {
   )
 }
 
-export function BedLayoutManager({ beds: initialBeds }: BedLayoutManagerProps) {
+export function BedLayoutManager({ beds: initialBeds, beachId }: BedLayoutManagerProps) {
   const router = useRouter()
   const [localBeds, setLocalBeds] = useState<Bed[]>(initialBeds)
   const [activeBed, setActiveBed] = useState<Bed | null>(null)
@@ -192,7 +193,7 @@ export function BedLayoutManager({ beds: initialBeds }: BedLayoutManagerProps) {
     setLoading(true)
     const supabase = createClient()
     const { data } = await supabase.from('beds').insert({
-      label, row: parseInt(row), col: parseInt(col), section: section || null
+      label, row: parseInt(row), col: parseInt(col), section: section || null, beach_id: beachId
     }).select().single()
     if (data) setLocalBeds(prev => [...prev, data as Bed])
     setAddOpen(false)
@@ -211,7 +212,7 @@ export function BedLayoutManager({ beds: initialBeds }: BedLayoutManagerProps) {
     for (let r = 1; r <= rowCount; r++) {
       const rowLetter = String.fromCharCode(prefix.charCodeAt(0) + r - 1)
       for (let c = 1; c <= colCount; c++) {
-        inserts.push({ label: `${rowLetter}${c}`, row: r, col: c })
+        inserts.push({ label: `${rowLetter}${c}`, row: r, col: c, beach_id: beachId })
       }
     }
     await supabase.from('beds').insert(inserts)

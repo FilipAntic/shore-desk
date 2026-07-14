@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button'
 
 interface QrCodesProps {
   beds: Bed[]
+  beachSlug: string
 }
 
-function QrCard({ bed, baseUrl }: { bed: Bed; baseUrl: string }) {
+function QrCard({ bed, baseUrl, beachSlug }: { bed: Bed; baseUrl: string; beachSlug: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const url = `${baseUrl}/order/${bed.label}`
+  const url = `${baseUrl}/order/${beachSlug}/${bed.label}`
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -34,7 +35,7 @@ function QrCard({ bed, baseUrl }: { bed: Bed; baseUrl: string }) {
   )
 }
 
-export function QrCodes({ beds }: QrCodesProps) {
+export function QrCodes({ beds, beachSlug }: QrCodesProps) {
   const printRef = useRef<HTMLDivElement>(null)
   const [baseUrl, setBaseUrl] = useState('')
   const [filter, setFilter] = useState<'all' | 'active'>('active')
@@ -71,7 +72,7 @@ export function QrCodes({ beds }: QrCodesProps) {
       </div>
 
       <p className="text-xs text-slate-400">
-        Each QR code links to: <code className="bg-slate-100 px-1 rounded">{baseUrl}/order/[BED]</code>
+        Each QR code links to: <code className="bg-slate-100 px-1 rounded">{baseUrl}/order/{beachSlug}/[BED]</code>
       </p>
 
       <div
@@ -81,7 +82,7 @@ export function QrCodes({ beds }: QrCodesProps) {
         {visibleBeds
           .sort((a, b) => a.row - b.row || a.col - b.col)
           .map(bed => (
-            <QrCard key={bed.id} bed={bed} baseUrl={baseUrl} />
+            <QrCard key={bed.id} bed={bed} baseUrl={baseUrl} beachSlug={beachSlug} />
           ))}
       </div>
 

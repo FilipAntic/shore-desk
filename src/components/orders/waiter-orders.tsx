@@ -17,7 +17,7 @@ const STATUS_STYLE: Record<string, { bar: string; badge: string; label: string }
   pending:    { bar: 'bg-yellow-400', badge: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
 }
 
-export function WaiterOrders() {
+export function WaiterOrders({ beachId }: { beachId: string }) {
   const [orders, setOrders]             = useState<Order[]>([])
   const [loading, setLoading]           = useState(true)
   const [tick, setTick]                 = useState(0)
@@ -42,22 +42,23 @@ export function WaiterOrders() {
           menu_item:menu_items(name, type)
         )
       `)
+      .eq('beach_id', beachId)
       .in('status', ['pending', 'preparing', 'ready', 'delivering'])
       .order('created_at', { ascending: true })
 
     if (data) setOrders(data)
     setLoading(false)
-  }, [])
+  }, [beachId])
 
   useEffect(() => {
     fetchOrders()
     const supabase = createClient()
     const channel = supabase
-      .channel('waiter-orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchOrders)
+      .channel(`waiter-orders-${beachId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `beach_id=eq.${beachId}` }, fetchOrders)
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [fetchOrders])
+  }, [fetchOrders, beachId])
 
   async function markDelivered(orderId: string) {
     const supabase = createClient()

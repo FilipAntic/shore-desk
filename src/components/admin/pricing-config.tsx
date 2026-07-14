@@ -14,15 +14,15 @@ const EDITABLE_KEYS: { key: string; label: string; description: string; prefix?:
   { key: 'closing_time',   label: 'Closing time',     description: 'Time when full day rentals expire', suffix: 'HH:MM' },
   { key: 'late_arrival_price', label: 'Late arrival price', description: 'Price charged when renting after the late arrival time', prefix: '€' },
   { key: 'late_arrival_time',  label: 'Late arrival time',  description: 'From this time, the late arrival price applies instead', suffix: 'HH:MM' },
-  { key: 'beach_name',     label: 'Beach / bar name', description: 'Shown on customer ordering page' },
   { key: 'order_timeout_minutes', label: 'Order timeout', description: 'Minutes before an unaccepted order is flagged', suffix: 'min' },
 ]
 
 interface PricingConfigProps {
   config: ConfigRow[]
+  beachId: string
 }
 
-export function PricingConfig({ config }: PricingConfigProps) {
+export function PricingConfig({ config, beachId }: PricingConfigProps) {
   const router = useRouter()
   const [values, setValues] = useState<Record<string, string>>(
     Object.fromEntries(config.map(c => [c.key, c.value]))
@@ -39,7 +39,10 @@ export function PricingConfig({ config }: PricingConfigProps) {
       EDITABLE_KEYS.map(({ key }) =>
         supabase
           .from('config')
-          .upsert({ key, value: values[key] ?? '', updated_at: new Date().toISOString() })
+          .upsert(
+            { beach_id: beachId, key, value: values[key] ?? '', updated_at: new Date().toISOString() },
+            { onConflict: 'beach_id,key' }
+          )
       )
     )
 

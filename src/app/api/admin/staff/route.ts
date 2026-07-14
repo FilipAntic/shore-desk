@@ -10,7 +10,7 @@ export async function POST(request: Request) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, beach_id')
       .eq('id', user.id)
       .single()
 
@@ -18,10 +18,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { email, password, fullName, role } = await request.json()
+    const { email, password, fullName, role, beachId } = await request.json()
 
     if (!email || !password || !fullName || !role) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // A manager can only ever create staff at their own beach — ignore
+    // whatever beachId the client sent and force it server-side. Owner
+    // accounts get no beach at all (null = sees every beach).
+    const targetBeachId: string | null =
+      role === 'owner' ? null : (profile.role === 'manager' ? profile.beach_id : (beachId ?? null))
+
+    if (role !== 'owner' && !targetBeachId) {
+      return NextResponse.json({ error: 'A beach is required for this role' }, { status: 400 })
     }
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -46,7 +56,7 @@ export async function POST(request: Request) {
 
     await admin
       .from('profiles')
-      .update({ role, full_name: fullName })
+      .update({ role, full_name: fullName, beach_id: targetBeachId })
       .eq('id', newUser.user.id)
 
     return NextResponse.json({ ok: true })

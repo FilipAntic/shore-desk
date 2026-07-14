@@ -8,6 +8,7 @@ import type { UserRole } from '@/types'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface NavItem {
   label: string
@@ -18,13 +19,13 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Beach Map', href: '/seller',  icon: '🗺️', roles: ['owner', 'manager', 'seller', 'waiter'] },
-  { label: 'Orders',    href: '/waiter',  icon: '🛎️', roles: ['owner', 'manager', 'waiter'],   badgeKey: 'ready' },
-  { label: 'Kitchen',   href: '/kitchen', icon: '🍳', roles: ['owner', 'manager', 'kitchen'],  badgeKey: 'food' },
-  { label: 'Bar',       href: '/bar',     icon: '🍹', roles: ['owner', 'manager', 'bar'],      badgeKey: 'drink' },
-  { label: 'Dashboard', href: '/manager', icon: '📊', roles: ['owner', 'manager'] },
-  { label: 'Reports',   href: '/reports', icon: '📋', roles: ['owner', 'manager'] },
-  { label: 'Admin',     href: '/admin',   icon: '⚙️', roles: ['owner', 'manager'] },
+  { label: 'Beach Map', href: 'seller',  icon: '🗺️', roles: ['owner', 'manager', 'seller', 'waiter'] },
+  { label: 'Orders',    href: 'waiter',  icon: '🛎️', roles: ['owner', 'manager', 'waiter'],   badgeKey: 'ready' },
+  { label: 'Kitchen',   href: 'kitchen', icon: '🍳', roles: ['owner', 'manager', 'kitchen'],  badgeKey: 'food' },
+  { label: 'Bar',       href: 'bar',     icon: '🍹', roles: ['owner', 'manager', 'bar'],      badgeKey: 'drink' },
+  { label: 'Dashboard', href: 'manager', icon: '📊', roles: ['owner', 'manager'] },
+  { label: 'Reports',   href: 'reports', icon: '📋', roles: ['owner', 'manager'] },
+  { label: 'Admin',     href: 'admin',   icon: '⚙️', roles: ['owner', 'manager'] },
 ]
 
 interface OrderBadges {
@@ -33,7 +34,7 @@ interface OrderBadges {
   ready: number
 }
 
-function useOrderBadges(role: UserRole): OrderBadges {
+function useOrderBadges(role: UserRole, beachId: string): OrderBadges {
   const [badges, setBadges] = useState<OrderBadges>({ food: 0, drink: 0, ready: 0 })
 
   const fetchBadges = useCallback(async () => {
@@ -41,6 +42,7 @@ function useOrderBadges(role: UserRole): OrderBadges {
     const { data } = await supabase
       .from('orders')
       .select('id, status, items:order_items(menu_item:menu_items(type))')
+      .eq('beach_id', beachId)
       .in('status', ['pending', 'preparing', 'ready', 'delivering'])
 
     if (!data) return
@@ -59,17 +61,17 @@ function useOrderBadges(role: UserRole): OrderBadges {
       }
     }
     setBadges({ food, drink, ready })
-  }, [])
+  }, [beachId])
 
   useEffect(() => {
     fetchBadges()
     const supabase = createClient()
     const channel = supabase
-      .channel('sidebar-badges')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchBadges)
+      .channel(`sidebar-badges-${beachId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `beach_id=eq.${beachId}` }, fetchBadges)
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [fetchBadges])
+  }, [fetchBadges, beachId])
 
   return badges
 }
@@ -77,12 +79,15 @@ function useOrderBadges(role: UserRole): OrderBadges {
 interface SidebarProps {
   role: UserRole
   fullName: string
+  beachSlug: string
+  beachId: string
+  beaches?: { slug: string; name: string }[]
 }
 
-export function Sidebar({ role, fullName }: SidebarProps) {
+export function Sidebar({ role, fullName, beachSlug, beachId, beaches = [] }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const badges = useOrderBadges(role)
+  const badges = useOrderBadges(role, beachId)
   const [moreOpen, setMoreOpen] = useState(false)
 
   async function handleSignOut() {
@@ -92,11 +97,20 @@ export function Sidebar({ role, fullName }: SidebarProps) {
     router.refresh()
   }
 
-  const visibleItems = NAV_ITEMS.filter(item => item.roles.includes(role))
+  function switchBeach(newSlug: string | null) {
+    if (!newSlug) return
+    const currentSegment = pathname.split('/')[2] ?? 'manager'
+    router.push(`/${newSlug}/${currentSegment}`)
+  }
+
+  const visibleItems = NAV_ITEMS
+    .filter(item => item.roles.includes(role))
+    .map(item => ({ ...item, href: `/${beachSlug}/${item.href}` }))
   const MOBILE_MAX = 4
   const primaryItems = visibleItems.slice(0, MOBILE_MAX)
   const moreItems = visibleItems.slice(MOBILE_MAX)
   const hasMore = moreItems.length > 0
+  const showBeachSwitcher = role === 'owner' && beaches.length > 1
 
   return (
     <>
@@ -106,6 +120,23 @@ export function Sidebar({ role, fullName }: SidebarProps) {
           <span className="text-2xl">🏖️</span>
           <span className="font-bold text-slate-800 text-lg">Shore Desk</span>
         </div>
+
+        {showBeachSwitcher && (
+          <div className="px-2 pb-3">
+            <Select value={beachSlug} onValueChange={switchBeach}>
+              <SelectTrigger className="w-full h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {beaches.map(b => (
+                  <SelectItem key={b.slug} value={b.slug} className="text-xs">
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <nav className="flex-1 space-y-0.5">
           {visibleItems.map(item => {
@@ -223,6 +254,23 @@ export function Sidebar({ role, fullName }: SidebarProps) {
                 ×
               </button>
             </div>
+
+            {showBeachSwitcher && (
+              <div className="px-4 pt-3">
+                <Select value={beachSlug} onValueChange={v => { switchBeach(v); setMoreOpen(false) }}>
+                  <SelectTrigger className="w-full h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {beaches.map(b => (
+                      <SelectItem key={b.slug} value={b.slug}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <nav className="p-3 space-y-0.5">
               {moreItems.map(item => {

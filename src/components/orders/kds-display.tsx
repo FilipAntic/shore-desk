@@ -8,6 +8,7 @@ interface KdsDisplayProps {
   filter: OrderItemType
   title: string
   icon: string
+  beachId: string
 }
 
 const STATUS_ACTIONS: Record<string, { next: string; label: string; color: string }> = {
@@ -48,7 +49,7 @@ function playNewOrderAlert() {
   }
 }
 
-export function KdsDisplay({ filter, title, icon }: KdsDisplayProps) {
+export function KdsDisplay({ filter, title, icon, beachId }: KdsDisplayProps) {
   const [orders, setOrders]           = useState<Order[]>([])
   const [loading, setLoading]         = useState(true)
   const [tick, setTick]               = useState(0)
@@ -76,6 +77,7 @@ export function KdsDisplay({ filter, title, icon }: KdsDisplayProps) {
           menu_item:menu_items(name, type)
         )
       `)
+      .eq('beach_id', beachId)
       .in('status', ['pending', 'preparing', 'ready'])
       .order('created_at', { ascending: true })
 
@@ -97,18 +99,18 @@ export function KdsDisplay({ filter, title, icon }: KdsDisplayProps) {
 
     setOrders(filtered)
     setLoading(false)
-  }, [filter])
+  }, [filter, beachId])
 
   useEffect(() => {
     fetchOrders()
     const supabase = createClient()
     const channel = supabase
-      .channel(`kds-${filter}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchOrders)
+      .channel(`kds-${filter}-${beachId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `beach_id=eq.${beachId}` }, fetchOrders)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchOrders)
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [fetchOrders, filter])
+  }, [fetchOrders, filter, beachId])
 
   async function advanceStatus(orderId: string, nextStatus: string) {
     const supabase = createClient()

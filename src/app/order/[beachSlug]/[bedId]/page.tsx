@@ -3,23 +3,33 @@ import { createClient } from '@/lib/supabase/server'
 import { OrderMenu } from '@/components/orders/order-menu'
 
 interface Props {
-  params: Promise<{ bedId: string }>
+  params: Promise<{ beachSlug: string; bedId: string }>
 }
 
 export default async function OrderPage({ params }: Props) {
-  const { bedId } = await params
+  const { beachSlug, bedId } = await params
   const supabase = await createClient()
 
-  // Look up bed by label (case-insensitive)
+  const { data: beach } = await supabase
+    .from('beaches')
+    .select('id, name')
+    .eq('slug', beachSlug)
+    .eq('is_active', true)
+    .single()
+
+  if (!beach) notFound()
+
+  // Look up bed by label (case-insensitive), scoped to this beach
   const { data: bed } = await supabase
     .from('beds')
-    .select('id, label, status')
+    .select('id, label, status, beach_id')
+    .eq('beach_id', beach.id)
     .ilike('label', bedId)
     .single()
 
   if (!bed) notFound()
 
-  // Fetch menu grouped by category
+  // Fetch menu grouped by category (menu is shared across every beach)
   const { data: menuItems } = await supabase
     .from('menu_items')
     .select('*')
@@ -31,16 +41,16 @@ export default async function OrderPage({ params }: Props) {
   const { data: config } = await supabase
     .from('config')
     .select('key, value')
-    .in('key', ['beach_name', 'currency'])
+    .eq('beach_id', beach.id)
+    .in('key', ['currency'])
 
-  const beachName = config?.find(c => c.key === 'beach_name')?.value ?? 'Shore Bar'
   const currency = config?.find(c => c.key === 'currency')?.value ?? 'EUR'
 
   return (
     <OrderMenu
       bed={bed}
       menuItems={menuItems ?? []}
-      beachName={beachName}
+      beachName={beach.name}
       currency={currency}
     />
   )

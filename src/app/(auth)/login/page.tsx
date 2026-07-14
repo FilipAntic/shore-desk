@@ -10,12 +10,12 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 const ROLE_DEFAULT_ROUTE: Record<UserRole, string> = {
-  owner:   '/manager',
-  manager: '/manager',
-  seller:  '/seller',
-  waiter:  '/waiter',
-  kitchen: '/kitchen',
-  bar:     '/bar',
+  owner:   'manager',
+  manager: 'manager',
+  seller:  'seller',
+  waiter:  'waiter',
+  kitchen: 'kitchen',
+  bar:     'bar',
 }
 
 export default function LoginPage() {
@@ -42,11 +42,32 @@ export default function LoginPage() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, beach_id, beach:beaches(slug)')
       .single()
 
     const role = (profile?.role ?? 'waiter') as UserRole
-    router.push(ROLE_DEFAULT_ROUTE[role])
+    let beachSlug = (profile?.beach as unknown as { slug: string } | null)?.slug ?? null
+
+    // Owner has no fixed beach — land on the first active one; they can
+    // switch beaches from the sidebar and manage beaches from Admin > Beaches.
+    if (!beachSlug) {
+      const { data: firstBeach } = await supabase
+        .from('beaches')
+        .select('slug')
+        .eq('is_active', true)
+        .order('name')
+        .limit(1)
+        .single()
+      beachSlug = firstBeach?.slug ?? null
+    }
+
+    if (!beachSlug) {
+      setError('No beaches are set up yet. Contact your administrator.')
+      setLoading(false)
+      return
+    }
+
+    router.push(`/${beachSlug}/${ROLE_DEFAULT_ROUTE[role]}`)
     router.refresh()
   }
 

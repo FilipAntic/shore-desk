@@ -25,7 +25,7 @@ function toDateString(d: Date) {
   return d.toISOString().slice(0, 10)
 }
 
-export function ShiftReport() {
+export function ShiftReport({ beachId }: { beachId: string }) {
   const [date, setDate]               = useState<string>(toDateString(new Date()))
   const [sellers, setSellers]         = useState<SellerRow[]>([])
   const [orders, setOrders]           = useState<OrderSummary | null>(null)
@@ -42,6 +42,7 @@ export function ShiftReport() {
     const { data: rentals } = await supabase
       .from('rentals')
       .select('seller_id, amount_paid, voided, seller:profiles(full_name, role)')
+      .eq('beach_id', beachId)
       .gte('created_at', dayStart)
       .lte('created_at', dayEnd)
 
@@ -76,6 +77,7 @@ export function ShiftReport() {
         id, status,
         items:order_items(unit_price, quantity, menu_item:menu_items(type))
       `)
+      .eq('beach_id', beachId)
       .gte('created_at', dayStart)
       .lte('created_at', dayEnd)
 
@@ -97,7 +99,7 @@ export function ShiftReport() {
     }
     setOrders({ total, food, drink, foodRevenue, drinkRevenue, cancelled })
     setLoading(false)
-  }, [])
+  }, [beachId])
 
   useEffect(() => {
     fetchReport(date)

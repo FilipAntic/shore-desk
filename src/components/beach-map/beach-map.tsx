@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 interface BeachMapProps {
   role: UserRole
+  beachId: string
 }
 
 type FilterType = 'all' | 'available' | 'occupied' | 'orders'
@@ -21,7 +22,7 @@ const LEGEND = [
   { color: 'bg-slate-100 border-slate-200',  label: 'Disabled' },
 ]
 
-export function BeachMap({ role }: BeachMapProps) {
+export function BeachMap({ role, beachId }: BeachMapProps) {
   const [beds, setBeds] = useState<BedWithState[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedBedId, setSelectedBedId] = useState<string | null>(null)
@@ -36,6 +37,7 @@ export function BeachMap({ role }: BeachMapProps) {
     const { data: bedsData } = await supabase
       .from('beds')
       .select('*')
+      .eq('beach_id', beachId)
       .order('row')
       .order('col')
 
@@ -44,12 +46,14 @@ export function BeachMap({ role }: BeachMapProps) {
     const { data: rentals } = await supabase
       .from('rentals')
       .select('*, seller:profiles!seller_id(full_name)')
+      .eq('beach_id', beachId)
       .eq('voided', false)
       .gte('ends_at', new Date().toISOString())
 
     const { data: orders } = await supabase
       .from('orders')
       .select('*, items:order_items(*, menu_item:menu_items(name, type))')
+      .eq('beach_id', beachId)
       .in('status', ['pending', 'preparing', 'ready', 'delivering'])
 
     // Auto-reset beds that are marked occupied but have no active rental (e.g. from previous day)
@@ -73,7 +77,7 @@ export function BeachMap({ role }: BeachMapProps) {
 
     setBeds(enriched)
     setLoading(false)
-  }, [])
+  }, [beachId])
 
   useEffect(() => {
     fetchBeds()
@@ -81,14 +85,14 @@ export function BeachMap({ role }: BeachMapProps) {
     // Real-time subscriptions
     const supabase = createClient()
     const channel = supabase
-      .channel('beach-map')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'beds' }, fetchBeds)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rentals' }, fetchBeds)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchBeds)
+      .channel(`beach-map-${beachId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'beds', filter: `beach_id=eq.${beachId}` }, fetchBeds)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rentals', filter: `beach_id=eq.${beachId}` }, fetchBeds)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `beach_id=eq.${beachId}` }, fetchBeds)
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [fetchBeds])
+  }, [fetchBeds, beachId])
 
   const filteredBeds = beds.filter(bed => {
     if (filter === 'available') return bed.status === 'available'
