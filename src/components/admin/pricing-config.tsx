@@ -12,6 +12,8 @@ interface ConfigRow { key: string; value: string }
 const EDITABLE_KEYS: { key: string; label: string; description: string; prefix?: string; suffix?: string }[] = [
   { key: 'price_full_day', label: 'Full day price',   description: 'Price charged per sun bed per day', prefix: '€' },
   { key: 'closing_time',   label: 'Closing time',     description: 'Time when full day rentals expire', suffix: 'HH:MM' },
+  { key: 'late_arrival_price', label: 'Late arrival price', description: 'Price charged when renting after the late arrival time', prefix: '€' },
+  { key: 'late_arrival_time',  label: 'Late arrival time',  description: 'From this time, the late arrival price applies instead', suffix: 'HH:MM' },
   { key: 'beach_name',     label: 'Beach / bar name', description: 'Shown on customer ordering page' },
   { key: 'order_timeout_minutes', label: 'Order timeout', description: 'Minutes before an unaccepted order is flagged', suffix: 'min' },
 ]

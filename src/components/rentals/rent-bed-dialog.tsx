@@ -17,8 +17,15 @@ interface RentBedDialogProps {
   onSuccess: () => void
 }
 
+function isPastTimeOfDay(hhmm: string): boolean {
+  const [h, m] = hhmm.split(':').map(Number)
+  const now = new Date()
+  return now.getHours() * 60 + now.getMinutes() >= h * 60 + m
+}
+
 export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDialogProps) {
   const [price, setPrice] = useState<number | null>(null)
+  const [isLateArrival, setIsLateArrival] = useState(false)
   const [closingTime, setClosingTime] = useState('18:00')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
@@ -30,12 +37,22 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
       const { data } = await supabase
         .from('config')
         .select('key, value')
-        .in('key', ['price_full_day', 'closing_time'])
+        .in('key', ['price_full_day', 'closing_time', 'late_arrival_price', 'late_arrival_time'])
 
       const priceRow = data?.find(r => r.key === 'price_full_day')
       const timeRow  = data?.find(r => r.key === 'closing_time')
-      if (priceRow) setPrice(parseFloat(priceRow.value))
-      if (timeRow)  setClosingTime(timeRow.value)
+      const latePriceRow = data?.find(r => r.key === 'late_arrival_price')
+      const lateTimeRow  = data?.find(r => r.key === 'late_arrival_time')
+
+      if (timeRow) setClosingTime(timeRow.value)
+
+      const isLate = lateTimeRow ? isPastTimeOfDay(lateTimeRow.value) : false
+      setIsLateArrival(isLate)
+      if (isLate && latePriceRow) {
+        setPrice(parseFloat(latePriceRow.value))
+      } else if (priceRow) {
+        setPrice(parseFloat(priceRow.value))
+      }
     }
     if (open) loadConfig()
   }, [open])
@@ -84,7 +101,9 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="bg-slate-50 rounded-lg p-4 flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Full day rental</p>
+              <p className="text-sm text-slate-500">
+                {isLateArrival ? 'Late arrival rental' : 'Full day rental'}
+              </p>
               <p className="text-xs text-slate-400">Until {closingTime}</p>
             </div>
             <p className="text-2xl font-bold text-slate-800">

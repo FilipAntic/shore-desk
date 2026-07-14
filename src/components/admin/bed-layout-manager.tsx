@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import type { Bed } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -88,7 +89,7 @@ export function BedLayoutManager({ beds: initialBeds }: BedLayoutManagerProps) {
   const [prefix, setPrefix] = useState('A')
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
   )
 
@@ -110,58 +111,73 @@ export function BedLayoutManager({ beds: initialBeds }: BedLayoutManagerProps) {
     const activeId = active.id as string
     const overId = over.id as string
 
-    setLocalBeds(prev => {
-      const activeBed = prev.find(b => b.id === activeId)
-      const overBed = prev.find(b => b.id === overId)
-      if (!activeBed || !overBed) return prev
+    const prev = localBeds
+    const activeBed = prev.find(b => b.id === activeId)
+    const overBed = prev.find(b => b.id === overId)
+    if (!activeBed || !overBed) return
 
-      let next: Bed[]
+    let next: Bed[]
 
-      if (activeBed.row === overBed.row) {
-        // Same row — reorder via arrayMove
-        const rowBeds = prev.filter(b => b.row === activeBed.row).sort((a, b) => a.col - b.col)
-        const fromIdx = rowBeds.findIndex(b => b.id === activeId)
-        const toIdx = rowBeds.findIndex(b => b.id === overId)
-        const reordered = arrayMove(rowBeds, fromIdx, toIdx)
-        next = prev.map(b => {
-          const newPos = reordered.findIndex(r => r.id === b.id)
-          return newPos !== -1 ? { ...b, col: newPos + 1 } : b
-        })
-      } else {
-        // Cross-row — move active into over's row, insert at over's col position
-        const sourceRow = activeBed.row
-        const targetRow = overBed.row
+    if (activeBed.row === overBed.row) {
+      // Same row — reorder via arrayMove
+      const rowBeds = prev.filter(b => b.row === activeBed.row).sort((a, b) => a.col - b.col)
+      const fromIdx = rowBeds.findIndex(b => b.id === activeId)
+      const toIdx = rowBeds.findIndex(b => b.id === overId)
+      const reordered = arrayMove(rowBeds, fromIdx, toIdx)
+      next = prev.map(b => {
+        const newPos = reordered.findIndex(r => r.id === b.id)
+        return newPos !== -1 ? { ...b, col: newPos + 1 } : b
+      })
+    } else {
+      // Cross-row — move active into over's row, insert at over's col position
+      const sourceRow = activeBed.row
+      const targetRow = overBed.row
 
-        const newSourceRow = prev
-          .filter(b => b.row === sourceRow && b.id !== activeId)
-          .sort((a, b) => a.col - b.col)
-          .map((b, i) => ({ ...b, col: i + 1 }))
+      const newSourceRow = prev
+        .filter(b => b.row === sourceRow && b.id !== activeId)
+        .sort((a, b) => a.col - b.col)
+        .map((b, i) => ({ ...b, col: i + 1 }))
 
-        const targetRowBeds = prev.filter(b => b.row === targetRow).sort((a, b) => a.col - b.col)
-        const insertAt = targetRowBeds.findIndex(b => b.id === overId)
-        const newTargetRow = [...targetRowBeds]
-        newTargetRow.splice(insertAt, 0, { ...activeBed, row: targetRow })
-        const resequencedTarget = newTargetRow.map((b, i) => ({ ...b, col: i + 1 }))
+      const targetRowBeds = prev.filter(b => b.row === targetRow).sort((a, b) => a.col - b.col)
+      const insertAt = targetRowBeds.findIndex(b => b.id === overId)
+      const newTargetRow = [...targetRowBeds]
+      newTargetRow.splice(insertAt, 0, { ...activeBed, row: targetRow })
+      const resequencedTarget = newTargetRow.map((b, i) => ({ ...b, col: i + 1 }))
 
-        next = [
-          ...prev.filter(b => b.row !== sourceRow && b.row !== targetRow),
-          ...newSourceRow,
-          ...resequencedTarget,
-        ]
-      }
+      next = [
+        ...prev.filter(b => b.row !== sourceRow && b.row !== targetRow),
+        ...newSourceRow,
+        ...resequencedTarget,
+      ]
+    }
 
-      persist(next, [activeBed.row, overBed.row])
-      return next
-    })
+    setLocalBeds(next)
+    persist(next, [activeBed.row, overBed.row], prev)
   }
 
-  async function persist(beds: Bed[], affectedRows: number[]) {
+  async function persist(beds: Bed[], affectedRows: number[], previousBeds: Bed[]) {
     setSaving(true)
     const supabase = createClient()
     const toUpdate = beds.filter(b => affectedRows.includes(b.row))
-    await Promise.all(toUpdate.map(b =>
+
+    // (row, col) has a unique constraint, and a reorder is a permutation where
+    // one bed's new position is another bed's current position. Writing final
+    // values directly in parallel races the constraint. Stage every affected
+    // bed to a distinct, out-of-range row first, then move to final values.
+    const TEMP_ROW_OFFSET = -1000
+    const staged = await Promise.all(toUpdate.map((b, i) =>
+      supabase.from('beds').update({ row: TEMP_ROW_OFFSET - i, col: 1 }).eq('id', b.id)
+    ))
+    const finalized = await Promise.all(toUpdate.map(b =>
       supabase.from('beds').update({ row: b.row, col: b.col }).eq('id', b.id)
     ))
+
+    const failed = [...staged, ...finalized].some(r => r.error)
+    if (failed) {
+      setLocalBeds(previousBeds)
+      toast.error('Could not save the new layout — reverted.')
+    }
+
     setSaving(false)
   }
 
