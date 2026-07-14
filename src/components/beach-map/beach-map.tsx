@@ -133,7 +133,7 @@ export function BeachMap({ role, beachId }: BeachMapProps) {
       {/* Map area */}
       <div className="flex-1 p-4 md:p-6 overflow-auto space-y-4 md:space-y-6">
         {/* Stats — horizontally scrollable on mobile */}
-        <div className="flex gap-2 md:gap-3 overflow-x-auto pb-1 md:pb-0 md:flex-wrap scrollbar-none">
+        <div className="flex gap-2 md:gap-3 overflow-x-auto overscroll-x-contain pb-1 md:pb-0 md:flex-wrap scrollbar-none">
           {[
             { label: 'Total', value: stats.total, color: 'text-slate-700' },
             { label: 'Occupied', value: stats.occupied, color: 'text-red-600' },
@@ -176,7 +176,7 @@ export function BeachMap({ role, beachId }: BeachMapProps) {
             .map(([row, rowBeds]) => (
               <div key={row} className="flex items-center gap-2">
                 <span className="text-xs text-slate-400 w-4 flex-shrink-0 text-right">{rowBeds[0]?.label?.[0]}</span>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                <div className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1 scrollbar-none">
                   {rowBeds
                     .sort((a, b) => a.col - b.col)
                     .map(bed => (

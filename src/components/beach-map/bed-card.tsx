@@ -41,15 +41,15 @@ export function BedCard({ bed, isSelected, onClick }: BedCardProps) {
     <button
       onClick={isDisabled ? undefined : onClick}
       className={cn(
-        'relative flex flex-col items-center justify-center rounded-lg border-2 transition-all',
-        'w-16 h-16 text-xs font-semibold select-none',
+        'relative flex flex-shrink-0 flex-col items-center justify-center rounded-lg border-2 transition-all',
+        'w-20 h-20 text-sm font-semibold select-none md:w-16 md:h-16 md:text-xs',
         getBedStyle(bed),
         isSelected && 'ring-2 ring-offset-1 ring-sky-500 z-10'
       )}
       title={`Bed ${bed.label} — ${bed.status}`}
     >
-      <span className="text-lg leading-none">{getBedIcon(bed)}</span>
-      <span className="mt-0.5 leading-none">{bed.label}</span>
+      <span className="text-xl leading-none md:text-lg">{getBedIcon(bed)}</span>
+      <span className="mt-1 leading-none md:mt-0.5">{bed.label}</span>
       {bed.pending_orders.length > 0 && (
         <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
           {bed.pending_orders.length}

@@ -7,6 +7,7 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const containerRef = useRef<HTMLDivElement>(null)
   const startY = useRef(0)
+  const startX = useRef(0)
   const [pullY, setPullY] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -22,15 +23,22 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
     if (!el) return
 
     const onTouchStart = (e: TouchEvent) => {
-      if (el.scrollTop === 0) startY.current = e.touches[0].clientY
+      if (el.scrollTop === 0) {
+        startY.current = e.touches[0].clientY
+        startX.current = e.touches[0].clientX
+      }
     }
 
     const onTouchMove = (e: TouchEvent) => {
       if (el.scrollTop > 0 || refreshing) return
-      const delta = e.touches[0].clientY - startY.current
-      if (delta > 0) {
+      const deltaY = e.touches[0].clientY - startY.current
+      const deltaX = e.touches[0].clientX - startX.current
+      // Only hijack the gesture as a pull-to-refresh once it's clearly a
+      // downward drag, not a horizontal swipe (e.g. scrolling a bed row) —
+      // otherwise preventDefault() below kills the row's native scroll.
+      if (deltaY > 0 && Math.abs(deltaY) > Math.abs(deltaX)) {
         // dampen: pull feels heavier as it extends
-        setPullY(Math.min(delta * 0.4, 64))
+        setPullY(Math.min(deltaY * 0.4, 64))
         e.preventDefault()
       }
     }
