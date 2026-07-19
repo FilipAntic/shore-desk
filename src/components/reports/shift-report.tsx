@@ -12,6 +12,15 @@ interface SellerRow {
   revenue: number
 }
 
+interface RentalRow {
+  id: string
+  bedLabel: string
+  sellerName: string
+  startedAt: string
+  amountPaid: number
+  voided: boolean
+}
+
 interface OrderSummary {
   total: number
   food: number
@@ -28,8 +37,13 @@ function toDateString(d: Date) {
 export function ShiftReport({ beachId }: { beachId: string }) {
   const [date, setDate]               = useState<string>(toDateString(new Date()))
   const [sellers, setSellers]         = useState<SellerRow[]>([])
+  const [rentalRows, setRentalRows]   = useState<RentalRow[]>([])
   const [orders, setOrders]           = useState<OrderSummary | null>(null)
   const [loading, setLoading]         = useState(false)
+
+  function formatTime(iso: string) {
+    return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  }
 
   const fetchReport = useCallback(async (dateStr: string) => {
     setLoading(true)
@@ -41,14 +55,17 @@ export function ShiftReport({ beachId }: { beachId: string }) {
     // ── Rentals ───────────────────────────────────────────────────
     const { data: rentals } = await supabase
       .from('rentals')
-      .select('seller_id, amount_paid, voided, seller:profiles(full_name, role)')
+      .select('id, seller_id, amount_paid, voided, started_at, bed:beds(label), seller:profiles!seller_id(full_name, role)')
       .eq('beach_id', beachId)
       .gte('created_at', dayStart)
       .lte('created_at', dayEnd)
+      .order('started_at')
 
     const sellerMap = new Map<string, SellerRow>()
+    const rows: RentalRow[] = []
     for (const r of rentals ?? []) {
       const seller = (r.seller as unknown) as { full_name: string; role: string } | null
+      const bed = (r.bed as unknown) as { label: string } | null
       if (!seller) continue
       if (!sellerMap.has(r.seller_id)) {
         sellerMap.set(r.seller_id, {
@@ -67,8 +84,17 @@ export function ShiftReport({ beachId }: { beachId: string }) {
       } else {
         row.revenue += Number(r.amount_paid)
       }
+      rows.push({
+        id:         r.id,
+        bedLabel:   bed?.label ?? '—',
+        sellerName: seller.full_name,
+        startedAt:  r.started_at,
+        amountPaid: Number(r.amount_paid),
+        voided:     r.voided,
+      })
     }
     setSellers(Array.from(sellerMap.values()).sort((a, b) => b.revenue - a.revenue))
+    setRentalRows(rows)
 
     // ── Orders ────────────────────────────────────────────────────
     const { data: ordersData } = await supabase
@@ -182,6 +208,40 @@ export function ShiftReport({ beachId }: { beachId: string }) {
                 </td>
               </tr>
             </tfoot>
+          </table>
+        )}
+      </div>
+
+      {/* Rentals detail */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100">
+          <h2 className="font-semibold text-slate-800">Rentals Detail</h2>
+        </div>
+
+        {rentalRows.length === 0 ? (
+          <p className="text-slate-400 text-sm text-center py-8">No rentals on this date</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+              <tr>
+                <th className="text-left px-4 py-2">Bed</th>
+                <th className="text-left px-4 py-2">Time</th>
+                <th className="text-left px-4 py-2">Staff member</th>
+                <th className="text-right px-4 py-2">Price</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {rentalRows.map(row => (
+                <tr key={row.id} className={row.voided ? 'opacity-50' : 'hover:bg-slate-50'}>
+                  <td className="px-4 py-3 font-medium text-slate-800">{row.bedLabel}</td>
+                  <td className="px-4 py-3 text-slate-500">{formatTime(row.startedAt)}</td>
+                  <td className="px-4 py-3 text-slate-500">{row.sellerName}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-green-700">
+                    {row.voided ? <span className="text-red-500 font-medium">Voided</span> : `€${row.amountPaid.toFixed(2)}`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
           </table>
         )}
       </div>
