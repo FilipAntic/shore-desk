@@ -25,6 +25,7 @@ function isPastTimeOfDay(hhmm: string): boolean {
 
 export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDialogProps) {
   const [price, setPrice] = useState<number | null>(null)
+  const [priceInput, setPriceInput] = useState('')
   const [isLateArrival, setIsLateArrival] = useState(false)
   const [closingTime, setClosingTime] = useState('18:00')
   const [notes, setNotes] = useState('')
@@ -49,14 +50,26 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
 
       const isLate = lateTimeRow ? isPastTimeOfDay(lateTimeRow.value) : false
       setIsLateArrival(isLate)
-      if (isLate && latePriceRow) {
-        setPrice(parseFloat(latePriceRow.value))
-      } else if (priceRow) {
-        setPrice(parseFloat(priceRow.value))
+
+      const defaultPrice = isLate && latePriceRow
+        ? parseFloat(latePriceRow.value)
+        : priceRow
+          ? parseFloat(priceRow.value)
+          : null
+
+      if (defaultPrice !== null) {
+        setPrice(defaultPrice)
+        setPriceInput(defaultPrice.toFixed(2))
       }
     }
     if (open) loadConfig()
   }, [open])
+
+  function handlePriceChange(value: string) {
+    setPriceInput(value)
+    const parsed = parseFloat(value)
+    setPrice(Number.isNaN(parsed) ? null : parsed)
+  }
 
   function calcEndsAt(): Date {
     const [h, m] = closingTime.split(':').map(Number)
@@ -101,16 +114,25 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="bg-slate-50 rounded-lg p-4 flex items-center justify-between">
+          <div className="bg-slate-50 rounded-lg p-4 flex items-center justify-between gap-4">
             <div>
               <p className="text-sm text-slate-500">
                 {isLateArrival ? 'Late arrival rental' : 'Full day rental'}
               </p>
               <p className="text-xs text-slate-400">Until {closingTime}</p>
             </div>
-            <p className="text-2xl font-bold text-slate-800">
-              {price !== null ? `€${price.toFixed(2)}` : '...'}
-            </p>
+            <div className="flex items-center gap-1">
+              <span className="text-xl font-bold text-slate-800">€</span>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                inputMode="decimal"
+                className="w-24 text-right text-xl font-bold text-slate-800"
+                value={priceInput}
+                onChange={e => handlePriceChange(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="space-y-1">
