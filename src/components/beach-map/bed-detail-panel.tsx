@@ -116,6 +116,10 @@ export function BedDetailPanel({ bed, role, onClose, onRefresh }: BedDetailPanel
                 <span className="font-semibold text-green-700">{formatCurrency(rental.amount_paid)}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-slate-500">Payment</span>
+                <span className="font-medium capitalize">{rental.payment_method === 'card' ? '💳 Card' : '💵 Cash'}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-slate-500">Staff</span>
                 <span className="font-medium">{rental.seller?.full_name ?? '—'}</span>
               </div>

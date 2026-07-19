@@ -18,6 +18,7 @@ interface RentalRow {
   sellerName: string
   startedAt: string
   amountPaid: number
+  paymentMethod: string
   voided: boolean
 }
 
@@ -55,7 +56,7 @@ export function ShiftReport({ beachId }: { beachId: string }) {
     // ── Rentals ───────────────────────────────────────────────────
     const { data: rentals } = await supabase
       .from('rentals')
-      .select('id, seller_id, amount_paid, voided, started_at, bed:beds(label), seller:profiles!seller_id(full_name, role)')
+      .select('id, seller_id, amount_paid, payment_method, voided, started_at, bed:beds(label), seller:profiles!seller_id(full_name, role)')
       .eq('beach_id', beachId)
       .gte('created_at', dayStart)
       .lte('created_at', dayEnd)
@@ -85,11 +86,12 @@ export function ShiftReport({ beachId }: { beachId: string }) {
         row.revenue += Number(r.amount_paid)
       }
       rows.push({
-        id:         r.id,
-        bedLabel:   bed?.label ?? '—',
-        sellerName: seller.full_name,
-        startedAt:  r.started_at,
-        amountPaid: Number(r.amount_paid),
+        id:            r.id,
+        bedLabel:      bed?.label ?? '—',
+        sellerName:    seller.full_name,
+        startedAt:     r.started_at,
+        amountPaid:    Number(r.amount_paid),
+        paymentMethod: r.payment_method,
         voided:     r.voided,
       })
     }
@@ -227,6 +229,7 @@ export function ShiftReport({ beachId }: { beachId: string }) {
                 <th className="text-left px-4 py-2">Bed</th>
                 <th className="text-left px-4 py-2">Time</th>
                 <th className="text-left px-4 py-2">Staff member</th>
+                <th className="text-left px-4 py-2">Payment</th>
                 <th className="text-right px-4 py-2">Price</th>
               </tr>
             </thead>
@@ -236,6 +239,7 @@ export function ShiftReport({ beachId }: { beachId: string }) {
                   <td className="px-4 py-3 font-medium text-slate-800">{row.bedLabel}</td>
                   <td className="px-4 py-3 text-slate-500">{formatTime(row.startedAt)}</td>
                   <td className="px-4 py-3 text-slate-500">{row.sellerName}</td>
+                  <td className="px-4 py-3 text-slate-500 capitalize">{row.paymentMethod}</td>
                   <td className="px-4 py-3 text-right font-semibold text-green-700">
                     {row.voided ? <span className="text-red-500 font-medium">Voided</span> : `€${row.amountPaid.toFixed(2)}`}
                   </td>

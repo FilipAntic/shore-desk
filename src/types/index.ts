@@ -8,6 +8,8 @@ export type OrderItemType = 'food' | 'drink'
 
 export type RentalDuration = 'full_day'
 
+export type PaymentMethod = 'cash' | 'card'
+
 // ── Database row types ──────────────────────────────────────────────────────
 
 export interface Beach {
@@ -49,6 +51,7 @@ export interface Rental {
   ends_at: string
   amount_paid: number
   duration_type: RentalDuration
+  payment_method: PaymentMethod
   notes: string | null
   created_at: string
   // joins

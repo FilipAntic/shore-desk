@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { BedWithState } from '@/types'
+import type { BedWithState, PaymentMethod } from '@/types'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 
 interface RentBedDialogProps {
   bed: BedWithState
@@ -29,6 +30,7 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
   const [isLateArrival, setIsLateArrival] = useState(false)
   const [closingTime, setClosingTime] = useState('18:00')
   const [notes, setNotes] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null)
   const [loading, setLoading] = useState(false)
   const [configLoading, setConfigLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -36,6 +38,7 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
   useEffect(() => {
     async function loadConfig() {
       setConfigLoading(true)
+      setPaymentMethod(null)
       const supabase = createClient()
       const { data } = await supabase
         .from('config')
@@ -84,7 +87,7 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (price === null) return
+    if (price === null || paymentMethod === null) return
     setLoading(true)
     setError(null)
 
@@ -99,6 +102,7 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
       ends_at:       calcEndsAt().toISOString(),
       amount_paid:   price,
       duration_type: 'full_day',
+      payment_method: paymentMethod,
       notes:         notes || null,
     })
 
@@ -141,6 +145,27 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
           </div>
 
           <div className="space-y-1">
+            <Label>Payment method</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['cash', 'card'] as PaymentMethod[]).map(method => (
+                <button
+                  key={method}
+                  type="button"
+                  onClick={() => setPaymentMethod(method)}
+                  className={cn(
+                    'py-2 rounded-lg border text-sm font-medium capitalize transition-colors',
+                    paymentMethod === method
+                      ? 'bg-sky-50 border-sky-400 text-sky-700'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  )}
+                >
+                  {method === 'cash' ? '💵 Cash' : '💳 Card'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1">
             <Label>Notes (optional)</Label>
             <Input
               placeholder="e.g. extra umbrella, VIP guest"
@@ -157,7 +182,7 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || configLoading || price === null}>
+            <Button type="submit" disabled={loading || configLoading || price === null || paymentMethod === null}>
               {loading ? 'Saving...' : `Confirm — €${price?.toFixed(2) ?? '...'}`}
             </Button>
           </DialogFooter>
