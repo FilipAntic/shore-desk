@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
 
 interface SellerRow {
   id: string
@@ -168,49 +169,77 @@ export function ShiftReport({ beachId }: { beachId: string }) {
         {sellers.length === 0 ? (
           <p className="text-slate-400 text-sm text-center py-8">No rentals on this date</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
-              <tr>
-                <th className="text-left px-4 py-2">Staff member</th>
-                <th className="text-left px-4 py-2">Role</th>
-                <th className="text-right px-4 py-2">Rentals</th>
-                <th className="text-right px-4 py-2">Voided</th>
-                <th className="text-right px-4 py-2">Revenue</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+          <>
+            {/* Mobile card list */}
+            <div className="md:hidden divide-y divide-slate-100">
               {sellers.map(row => (
-                <tr key={row.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-800">{row.full_name}</td>
-                  <td className="px-4 py-3 text-slate-500 capitalize">{row.role}</td>
-                  <td className="px-4 py-3 text-right text-slate-700">{row.rentals}</td>
-                  <td className="px-4 py-3 text-right">
-                    {row.voided > 0
-                      ? <span className="text-red-500 font-medium">{row.voided}</span>
-                      : <span className="text-slate-400">0</span>
-                    }
+                <div key={row.id} className="p-4 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-slate-800">{row.full_name}</span>
+                    <span className="font-semibold text-green-700">€{row.revenue.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                    <span className="capitalize">{row.role}</span>
+                    <span>
+                      {row.rentals} rental{row.rentals === 1 ? '' : 's'}
+                      {row.voided > 0 && <span className="text-red-500 font-medium"> · {row.voided} voided</span>}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              <div className="p-4 flex items-center justify-between bg-slate-50">
+                <span className="text-xs font-bold text-slate-500 uppercase">
+                  Total — {sellers.reduce((s, r) => s + r.rentals, 0)} rentals
+                </span>
+                <span className="font-bold text-green-700">€{totalRentalRevenue.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Desktop table */}
+            <table className="hidden md:table w-full text-sm">
+              <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+                <tr>
+                  <th className="text-left px-4 py-2">Staff member</th>
+                  <th className="text-left px-4 py-2">Role</th>
+                  <th className="text-right px-4 py-2">Rentals</th>
+                  <th className="text-right px-4 py-2">Voided</th>
+                  <th className="text-right px-4 py-2">Revenue</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {sellers.map(row => (
+                  <tr key={row.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-medium text-slate-800">{row.full_name}</td>
+                    <td className="px-4 py-3 text-slate-500 capitalize">{row.role}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{row.rentals}</td>
+                    <td className="px-4 py-3 text-right">
+                      {row.voided > 0
+                        ? <span className="text-red-500 font-medium">{row.voided}</span>
+                        : <span className="text-slate-400">0</span>
+                      }
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold text-green-700">
+                      €{row.revenue.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="border-t-2 border-slate-200 bg-slate-50">
+                <tr>
+                  <td colSpan={2} className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Total</td>
+                  <td className="px-4 py-3 text-right font-bold text-slate-800">
+                    {sellers.reduce((s, r) => s + r.rentals, 0)}
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-green-700">
-                    €{row.revenue.toFixed(2)}
+                  <td className="px-4 py-3 text-right font-bold text-red-500">
+                    {sellers.reduce((s, r) => s + r.voided, 0)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-bold text-green-700">
+                    €{totalRentalRevenue.toFixed(2)}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot className="border-t-2 border-slate-200 bg-slate-50">
-              <tr>
-                <td colSpan={2} className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Total</td>
-                <td className="px-4 py-3 text-right font-bold text-slate-800">
-                  {sellers.reduce((s, r) => s + r.rentals, 0)}
-                </td>
-                <td className="px-4 py-3 text-right font-bold text-red-500">
-                  {sellers.reduce((s, r) => s + r.voided, 0)}
-                </td>
-                <td className="px-4 py-3 text-right font-bold text-green-700">
-                  €{totalRentalRevenue.toFixed(2)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+              </tfoot>
+            </table>
+          </>
         )}
       </div>
 
@@ -223,30 +252,51 @@ export function ShiftReport({ beachId }: { beachId: string }) {
         {rentalRows.length === 0 ? (
           <p className="text-slate-400 text-sm text-center py-8">No rentals on this date</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
-              <tr>
-                <th className="text-left px-4 py-2">Bed</th>
-                <th className="text-left px-4 py-2">Time</th>
-                <th className="text-left px-4 py-2">Staff member</th>
-                <th className="text-left px-4 py-2">Payment</th>
-                <th className="text-right px-4 py-2">Price</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+          <>
+            {/* Mobile card list */}
+            <div className="md:hidden divide-y divide-slate-100">
               {rentalRows.map(row => (
-                <tr key={row.id} className={row.voided ? 'opacity-50' : 'hover:bg-slate-50'}>
-                  <td className="px-4 py-3 font-medium text-slate-800">{row.bedLabel}</td>
-                  <td className="px-4 py-3 text-slate-500">{formatTime(row.startedAt)}</td>
-                  <td className="px-4 py-3 text-slate-500">{row.sellerName}</td>
-                  <td className="px-4 py-3 text-slate-500 capitalize">{row.paymentMethod}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-green-700">
-                    {row.voided ? <span className="text-red-500 font-medium">Voided</span> : `€${row.amountPaid.toFixed(2)}`}
-                  </td>
-                </tr>
+                <div key={row.id} className={cn('p-4 space-y-1', row.voided && 'opacity-50')}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-slate-800">Bed {row.bedLabel}</span>
+                    <span className="font-semibold text-green-700">
+                      {row.voided ? <span className="text-red-500 font-medium">Voided</span> : `€${row.amountPaid.toFixed(2)}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                    <span>{formatTime(row.startedAt)} · {row.sellerName}</span>
+                    <span className="capitalize">{row.paymentMethod}</span>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Desktop table */}
+            <table className="hidden md:table w-full text-sm">
+              <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+                <tr>
+                  <th className="text-left px-4 py-2">Bed</th>
+                  <th className="text-left px-4 py-2">Time</th>
+                  <th className="text-left px-4 py-2">Staff member</th>
+                  <th className="text-left px-4 py-2">Payment</th>
+                  <th className="text-right px-4 py-2">Price</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rentalRows.map(row => (
+                  <tr key={row.id} className={row.voided ? 'opacity-50' : 'hover:bg-slate-50'}>
+                    <td className="px-4 py-3 font-medium text-slate-800">{row.bedLabel}</td>
+                    <td className="px-4 py-3 text-slate-500">{formatTime(row.startedAt)}</td>
+                    <td className="px-4 py-3 text-slate-500">{row.sellerName}</td>
+                    <td className="px-4 py-3 text-slate-500 capitalize">{row.paymentMethod}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-green-700">
+                      {row.voided ? <span className="text-red-500 font-medium">Voided</span> : `€${row.amountPaid.toFixed(2)}`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
 
@@ -260,51 +310,89 @@ export function ShiftReport({ beachId }: { beachId: string }) {
         </div>
 
         {orders === null ? null : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
-              <tr>
-                <th className="text-left px-4 py-2">Category</th>
-                <th className="text-right px-4 py-2">Orders / Items</th>
-                <th className="text-right px-4 py-2">Revenue</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              <tr className="hover:bg-slate-50">
-                <td className="px-4 py-3 font-medium text-slate-800">All orders</td>
-                <td className="px-4 py-3 text-right text-slate-700">{orders.total}</td>
-                <td className="px-4 py-3 text-right font-semibold text-green-700">
-                  €{totalOrderRevenue.toFixed(2)}
-                </td>
-              </tr>
-              <tr className="hover:bg-slate-50">
-                <td className="px-4 py-3 text-slate-600">🍔 Food items</td>
-                <td className="px-4 py-3 text-right text-slate-700">{orders.food}</td>
-                <td className="px-4 py-3 text-right text-slate-700">€{orders.foodRevenue.toFixed(2)}</td>
-              </tr>
-              <tr className="hover:bg-slate-50">
-                <td className="px-4 py-3 text-slate-600">🍹 Drink items</td>
-                <td className="px-4 py-3 text-right text-slate-700">{orders.drink}</td>
-                <td className="px-4 py-3 text-right text-slate-700">€{orders.drinkRevenue.toFixed(2)}</td>
-              </tr>
+          <>
+            {/* Mobile card list */}
+            <div className="md:hidden divide-y divide-slate-100">
+              <div className="p-4 flex items-center justify-between gap-2">
+                <span className="font-medium text-slate-800">All orders</span>
+                <span className="text-right">
+                  <span className="block font-semibold text-green-700">€{totalOrderRevenue.toFixed(2)}</span>
+                  <span className="block text-xs text-slate-500">{orders.total} orders</span>
+                </span>
+              </div>
+              <div className="p-4 flex items-center justify-between gap-2">
+                <span className="text-slate-600">🍔 Food items</span>
+                <span className="text-right">
+                  <span className="block text-slate-700">€{orders.foodRevenue.toFixed(2)}</span>
+                  <span className="block text-xs text-slate-500">{orders.food} items</span>
+                </span>
+              </div>
+              <div className="p-4 flex items-center justify-between gap-2">
+                <span className="text-slate-600">🍹 Drink items</span>
+                <span className="text-right">
+                  <span className="block text-slate-700">€{orders.drinkRevenue.toFixed(2)}</span>
+                  <span className="block text-xs text-slate-500">{orders.drink} items</span>
+                </span>
+              </div>
               {orders.cancelled > 0 && (
-                <tr className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-red-500">Cancelled orders</td>
-                  <td className="px-4 py-3 text-right text-red-500">{orders.cancelled}</td>
-                  <td className="px-4 py-3 text-right text-slate-400">—</td>
-                </tr>
+                <div className="p-4 flex items-center justify-between gap-2">
+                  <span className="text-red-500">Cancelled orders</span>
+                  <span className="text-red-500">{orders.cancelled}</span>
+                </div>
               )}
-            </tbody>
-            <tfoot className="border-t-2 border-slate-200 bg-slate-50">
-              <tr>
-                <td colSpan={2} className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">
-                  Combined revenue
-                </td>
-                <td className="px-4 py-3 text-right font-bold text-green-700">
-                  €{(totalRentalRevenue + totalOrderRevenue).toFixed(2)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+              <div className="p-4 flex items-center justify-between bg-slate-50">
+                <span className="text-xs font-bold text-slate-500 uppercase">Combined revenue</span>
+                <span className="font-bold text-green-700">€{(totalRentalRevenue + totalOrderRevenue).toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Desktop table */}
+            <table className="hidden md:table w-full text-sm">
+              <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+                <tr>
+                  <th className="text-left px-4 py-2">Category</th>
+                  <th className="text-right px-4 py-2">Orders / Items</th>
+                  <th className="text-right px-4 py-2">Revenue</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <tr className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium text-slate-800">All orders</td>
+                  <td className="px-4 py-3 text-right text-slate-700">{orders.total}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-green-700">
+                    €{totalOrderRevenue.toFixed(2)}
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50">
+                  <td className="px-4 py-3 text-slate-600">🍔 Food items</td>
+                  <td className="px-4 py-3 text-right text-slate-700">{orders.food}</td>
+                  <td className="px-4 py-3 text-right text-slate-700">€{orders.foodRevenue.toFixed(2)}</td>
+                </tr>
+                <tr className="hover:bg-slate-50">
+                  <td className="px-4 py-3 text-slate-600">🍹 Drink items</td>
+                  <td className="px-4 py-3 text-right text-slate-700">{orders.drink}</td>
+                  <td className="px-4 py-3 text-right text-slate-700">€{orders.drinkRevenue.toFixed(2)}</td>
+                </tr>
+                {orders.cancelled > 0 && (
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-red-500">Cancelled orders</td>
+                    <td className="px-4 py-3 text-right text-red-500">{orders.cancelled}</td>
+                    <td className="px-4 py-3 text-right text-slate-400">—</td>
+                  </tr>
+                )}
+              </tbody>
+              <tfoot className="border-t-2 border-slate-200 bg-slate-50">
+                <tr>
+                  <td colSpan={2} className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">
+                    Combined revenue
+                  </td>
+                  <td className="px-4 py-3 text-right font-bold text-green-700">
+                    €{(totalRentalRevenue + totalOrderRevenue).toFixed(2)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </>
         )}
       </div>
     </div>
