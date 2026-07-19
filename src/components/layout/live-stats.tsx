@@ -12,11 +12,10 @@ interface Stat {
 
 interface LiveStatsProps {
   currency: string
-  pricePerBed: number
   beachId: string
 }
 
-export function LiveStats({ currency, pricePerBed, beachId }: LiveStatsProps) {
+export function LiveStats({ currency, beachId }: LiveStatsProps) {
   const [stats, setStats] = useState<Stat[]>([])
   const symbol = currency === 'EUR' ? '€' : currency
 
@@ -25,10 +24,10 @@ export function LiveStats({ currency, pricePerBed, beachId }: LiveStatsProps) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const [{ count: rentalsToday }, { data: ordersToday }, { data: beds }] = await Promise.all([
+    const [{ data: rentalsToday }, { data: ordersToday }, { data: beds }] = await Promise.all([
       supabase
         .from('rentals')
-        .select('*', { count: 'exact', head: true })
+        .select('amount_paid')
         .eq('beach_id', beachId)
         .gte('created_at', today.toISOString())
         .eq('voided', false),
@@ -49,18 +48,18 @@ export function LiveStats({ currency, pricePerBed, beachId }: LiveStatsProps) {
       (sum, i) => sum + i.unit_price * i.quantity, 0
     ) ?? 0
 
-    const rentalRevenue = (rentalsToday ?? 0) * pricePerBed
+    const rentalRevenue = rentalsToday?.reduce((sum, r) => sum + Number(r.amount_paid), 0) ?? 0
     const totalRevenue = rentalRevenue + orderRevenue
     const occupiedBeds = beds?.filter(b => b.status === 'occupied').length ?? 0
     const totalBeds = beds?.length ?? 0
 
     setStats([
-      { label: 'Total Revenue',      value: `${symbol}${totalRevenue.toFixed(2)}`, sub: 'today',  color: 'text-green-600' },
-      { label: 'Beds Rented',        value: String(rentalsToday ?? 0),             sub: 'today',  color: 'text-sky-600' },
-      { label: 'Currently Occupied', value: `${occupiedBeds}/${totalBeds}`,        sub: 'beds',   color: 'text-slate-700' },
-      { label: 'Food & Drink',       value: `${symbol}${orderRevenue.toFixed(2)}`, sub: 'today',  color: 'text-amber-600' },
+      { label: 'Total Revenue',      value: `${symbol}${totalRevenue.toFixed(2)}`,      sub: 'today',  color: 'text-green-600' },
+      { label: 'Beds Rented',        value: String(rentalsToday?.length ?? 0),          sub: 'today',  color: 'text-sky-600' },
+      { label: 'Currently Occupied', value: `${occupiedBeds}/${totalBeds}`,             sub: 'beds',   color: 'text-slate-700' },
+      { label: 'Food & Drink',       value: `${symbol}${orderRevenue.toFixed(2)}`,      sub: 'today',  color: 'text-amber-600' },
     ])
-  }, [symbol, pricePerBed, beachId])
+  }, [symbol, beachId])
 
   useEffect(() => {
     fetchStats()

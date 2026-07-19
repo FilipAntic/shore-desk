@@ -15,9 +15,8 @@ export default async function ManagerPage({ params }: { params: Promise<{ beachS
     .from('config')
     .select('key, value')
     .eq('beach_id', beach.id)
-    .in('key', ['price_full_day', 'currency'])
+    .eq('key', 'currency')
 
-  const pricePerBed = parseFloat(config?.find(c => c.key === 'price_full_day')?.value ?? '18')
   const currency = config?.find(c => c.key === 'currency')?.value ?? 'EUR'
 
   return (
@@ -29,7 +28,7 @@ export default async function ManagerPage({ params }: { params: Promise<{ beachS
 
       <div className="overflow-auto flex-1">
         <div className="p-6">
-          <LiveStats currency={currency} pricePerBed={pricePerBed} beachId={beach.id} />
+          <LiveStats currency={currency} beachId={beach.id} />
         </div>
 
         <div className="px-6 pb-2">
