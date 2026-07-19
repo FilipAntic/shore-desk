@@ -30,10 +30,12 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
   const [closingTime, setClosingTime] = useState('18:00')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
+  const [configLoading, setConfigLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadConfig() {
+      setConfigLoading(true)
       const supabase = createClient()
       const { data } = await supabase
         .from('config')
@@ -61,9 +63,10 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
         setPrice(defaultPrice)
         setPriceInput(defaultPrice.toFixed(2))
       }
+      setConfigLoading(false)
     }
     if (open) loadConfig()
-  }, [open])
+  }, [open, bed.beach_id])
 
   function handlePriceChange(value: string) {
     setPriceInput(value)
@@ -75,6 +78,7 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
     const [h, m] = closingTime.split(':').map(Number)
     const d = new Date()
     d.setHours(h, m, 0, 0)
+    if (d <= new Date()) d.setDate(d.getDate() + 1)
     return d
   }
 
@@ -128,6 +132,7 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
                 step="0.01"
                 min="0"
                 inputMode="decimal"
+                disabled={configLoading}
                 className="w-24 text-right text-xl font-bold text-slate-800"
                 value={priceInput}
                 onChange={e => handlePriceChange(e.target.value)}
@@ -152,7 +157,7 @@ export function RentBedDialog({ bed, open, onOpenChange, onSuccess }: RentBedDia
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || price === null}>
+            <Button type="submit" disabled={loading || configLoading || price === null}>
               {loading ? 'Saving...' : `Confirm — €${price?.toFixed(2) ?? '...'}`}
             </Button>
           </DialogFooter>
