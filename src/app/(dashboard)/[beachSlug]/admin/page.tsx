@@ -28,7 +28,7 @@ export default async function AdminPage({ params }: { params: Promise<{ beachSlu
     : null
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-full min-h-screen md:min-h-0">
       <div className="px-6 py-4 border-b border-slate-200 bg-white">
         <h1 className="text-xl font-bold text-slate-900">Admin</h1>
         <p className="text-sm text-slate-500">Manage staff, beds, and settings for {beach.name}</p>
