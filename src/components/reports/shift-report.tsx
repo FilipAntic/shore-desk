@@ -11,6 +11,8 @@ interface SellerRow {
   rentals: number
   voided: number
   revenue: number
+  cash: number
+  card: number
 }
 
 interface RentalRow {
@@ -77,6 +79,8 @@ export function ShiftReport({ beachId }: { beachId: string }) {
           rentals: 0,
           voided: 0,
           revenue: 0,
+          cash: 0,
+          card: 0,
         })
       }
       const row = sellerMap.get(r.seller_id)!
@@ -85,6 +89,8 @@ export function ShiftReport({ beachId }: { beachId: string }) {
         row.voided++
       } else {
         row.revenue += Number(r.amount_paid)
+        if (r.payment_method === 'card') row.card += Number(r.amount_paid)
+        else row.cash += Number(r.amount_paid)
       }
       rows.push({
         id:            r.id,
@@ -136,6 +142,8 @@ export function ShiftReport({ beachId }: { beachId: string }) {
 
   const totalRentalRevenue = sellers.reduce((s, r) => s + r.revenue, 0)
   const totalOrderRevenue  = (orders?.foodRevenue ?? 0) + (orders?.drinkRevenue ?? 0)
+  const totalCash          = sellers.reduce((s, r) => s + r.cash, 0)
+  const totalCard          = sellers.reduce((s, r) => s + r.card, 0)
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -156,6 +164,20 @@ export function ShiftReport({ beachId }: { beachId: string }) {
         </button>
         {loading && <span className="text-sm text-slate-400">Loading…</span>}
       </div>
+
+      {/* Cash to collect */}
+      {sellers.length > 0 && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">💵 Cash to collect</p>
+            <p className="text-2xl font-bold text-slate-900 mt-1">€{totalCash.toFixed(2)}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">💳 Card (settled)</p>
+            <p className="text-2xl font-bold text-slate-900 mt-1">€{totalCard.toFixed(2)}</p>
+          </div>
+        </div>
+      )}
 
       {/* Rentals by staff */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -185,6 +207,14 @@ export function ShiftReport({ beachId }: { beachId: string }) {
                       {row.voided > 0 && <span className="text-red-500 font-medium"> · {row.voided} voided</span>}
                     </span>
                   </div>
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="text-slate-500">💵 Cash to collect</span>
+                    <span className="font-semibold text-slate-800">€{row.cash.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="text-slate-500">💳 Card</span>
+                    <span className="text-slate-600">€{row.card.toFixed(2)}</span>
+                  </div>
                 </div>
               ))}
               <div className="p-4 flex items-center justify-between bg-slate-50">
@@ -203,6 +233,8 @@ export function ShiftReport({ beachId }: { beachId: string }) {
                   <th className="text-left px-4 py-2">Role</th>
                   <th className="text-right px-4 py-2">Rentals</th>
                   <th className="text-right px-4 py-2">Voided</th>
+                  <th className="text-right px-4 py-2">Cash to collect</th>
+                  <th className="text-right px-4 py-2">Card</th>
                   <th className="text-right px-4 py-2">Revenue</th>
                 </tr>
               </thead>
@@ -218,6 +250,12 @@ export function ShiftReport({ beachId }: { beachId: string }) {
                         : <span className="text-slate-400">0</span>
                       }
                     </td>
+                    <td className="px-4 py-3 text-right font-semibold text-slate-800">
+                      €{row.cash.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-600">
+                      €{row.card.toFixed(2)}
+                    </td>
                     <td className="px-4 py-3 text-right font-semibold text-green-700">
                       €{row.revenue.toFixed(2)}
                     </td>
@@ -232,6 +270,12 @@ export function ShiftReport({ beachId }: { beachId: string }) {
                   </td>
                   <td className="px-4 py-3 text-right font-bold text-red-500">
                     {sellers.reduce((s, r) => s + r.voided, 0)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-bold text-slate-800">
+                    €{totalCash.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-bold text-slate-800">
+                    €{totalCard.toFixed(2)}
                   </td>
                   <td className="px-4 py-3 text-right font-bold text-green-700">
                     €{totalRentalRevenue.toFixed(2)}
